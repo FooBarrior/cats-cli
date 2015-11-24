@@ -85,7 +85,10 @@ def login():
 	print('Username: ', end='')
 	usr = input()
 	pwd = getpass.getpass()
-	return get('main.pl', f='login', login=usr, passwd=pwd).json().get('sid')
+	j = get('main.pl', f='login', login=usr, passwd=pwd).json()
+	if 'error' in j:
+		print('error:', j['error'])
+	return j.get('sid')
 
 def uri_params(uri):
 	return dict(p.split('=') for p in uri.split('?')[-1].split(';'))
@@ -217,7 +220,7 @@ CMDS = {
 	'update': lambda: update_repo(*vals('sid', 'cid', 'cpid', 'download'))
 	'add': add_new_task
 	'help': show_help
-	'login': login
+	'login': lambda: data['sid'] = login()
 }
 
 if len(argv) > 3 or len(argv) == 1:
