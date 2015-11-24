@@ -69,6 +69,13 @@ def init(taskfile=None):
 </p>
 </OutputFormat>
 
+<Sample rank="1"><SampleIn src="01.in"/><SampleOut src="01.out"/></Sample>
+
+<Import guid="std.testlib.h.last" />
+<Checker src="check.cpp" name="chk" de_code="102" style="testlib" export="" />
+<Solution name="sol" src="" />
+<Generator name="gen" src="" />
+
 </Problem>
 </CATS>''')
 	open('.gitignore', 'w').writelines(['.gitignore', '*.zip', RC_FILE, '*.exe', 'a.out', '*.jar', '*.class'])
