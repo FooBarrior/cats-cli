@@ -12,11 +12,39 @@ PUSHALL_CMD = 'cats pushall'
 REMOTE_BRANCH = 'cats-remote'
 RC_FILE = '.catsrc'
 
-rcdata = {}
+def _git(args, soft):
+	if isinstance(args, str):
+		args = args.split()
+
+	try:
+		output = subprocess.check_output(chain(('git',), args))
+
+	except subprocess.CalledProcessError as e:
+		if soft:
+			return e.output, e.returncode
+		else:
+			print('git: ', e.output)
+			exit(e.returncode)
+
+	except FileNotFoundError as e:
+		print('git: ', e.strerror)
+		exit(e.errno)
+
+	else:
+		if soft:
+			return output, 0
+		else:
+			return output
+
+
+git_soft, git_hard = (
+	lambda args: _git(args, soft=soft) 
+		for soft in (True, False))
+
 
 def init(taskfile=None):
 	taskfile = taskfile || 'task.xml'
-	subprocess.call(['git', 'init'])
+	git_hard('init')
 	open(taskfile, 'w').write('''<?xml version="1.0" encoding="UTF-8" ?>
 <CATS version="1.8">
 <Problem title="" lang="ru"
@@ -63,11 +91,7 @@ def uri_params(uri):
 	return dict(p.split('=') for p in uri.split('?')[-1].split(';'))
 
 def prepare_zip():
-	files = subprocess.check_output('git ls-tree -r master --name-only'.split())
-	with ZipFile('task.zip', 'w') as zf:
-		for f in files:
-			zf.write(f)
-
+	git_hard('archive -o task.zip')
 
 def extract_console():
 	ta_s = '<textarea cols="100" rows="10" readonly="readonly">'
@@ -83,13 +107,8 @@ def update_repo(sid, cid, cpid, download):
 	with open(zip_file_name, 'wb') as f:
 		f.write(r.content)
 
-	try:
-		git_status = subprocess.check_output('git status --untracked -s'.split())
-	except subprocess.CalledProcessError as e:
-		print('`git status` returned code {}. Install git and add it to PATH, then run `{}`.'.format(e.returncode, INIT_CMD))
-		return
+	git_status = git_hard('status --untracked -s'.split())
 
-	yn = bool(git_status)
 	if git_status:
 		print("There are untracked files in work dir:")
 		print(git_status)
@@ -103,14 +122,16 @@ def update_repo(sid, cid, cpid, download):
 		ck_cmd.append('--orphan')
 	ck_cmd.append(REMOTE_BRANCH)
 
-	subprocess.call(ck_cmd)
+	git_hard(ck_cmd)
 
 	with ZipFile(zip_file_name, 'r') as zf:
 		zf.extractall()
-		subprocess.call(['git', 'add'] + zf.namelist())
-	subprocess.call(['git', 'commit', '-m', 'Update remote version'])
+		git_hard(['git', 'add'] + zf.namelist())
 
-	subprocess.call('git checkout master && git merge ' + REMOTE_BRANCH, shell=True)
+	git_hard(['git', 'commit', '-m', 'Update remote version'])
+
+	git_hard('checkout master')
+	git_hard('merge ' + REMOTE_BRANCH, shell=True)
 
 	prepare_zip()
 
