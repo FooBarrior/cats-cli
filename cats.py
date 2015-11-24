@@ -172,7 +172,7 @@ def show_help():
 url with sid, cid and cpid currently should be passed at least once to work
 commands are:
 init      initialize empty git repository
-update    update existing problem
+sync      update existing problem
 add       add new problem
 login     relogin if session is over
 ''')
