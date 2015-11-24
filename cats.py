@@ -186,24 +186,31 @@ END UTILS
 
 data = {}
 
-dic = lambda *l: {k: data[k] for k in l}
-vals = lambda *l: (data[k] for k in l)
+def get_or_panic(k):
+	if k in data:
+		return data[k]
+	print('Key `{}` is necessary for this command'.format(k))
+	exit(1)
+
+dic = lambda *l: {k: get_or_panic[k] for k in l}
+vals = lambda *l: (get_or_panic[k] for k in l)
 
 def read_config(file):
-	return dict(l.split('=') for l in open('file', 'r'))
+	try:
+		global data
+		data.update(dict(l.split('=') for l in open('file', 'r')))
+	except FileNotFoundError:
+		pass
 
-def write_config(file, dict):
-	open(file, 'w').writelines(("=".join(k, v) for k, v in dict.items()))
+def write_config(file, d):
+	open(file, 'w').writelines(("=".join(k, v) for k, v in d.items()))
 
 
 def read_configs():
-	global data
-	data = {}
-	data.update(read_config(path.join(path.expanduser('~'), RC_FILE)))
-	data.update(read_config(RC_FILE))
+	read_config(path.join(path.expanduser('~'), RC_FILE))
+	read_config(RC_FILE)
 
 def write_configs():
-	global data
 	write_config(path.join(path.expanduser('~'), RC_FILE), dic('sid')})
 	write_config(path.join(RC_FILE), dic('cid', 'cpid', 'download')})
 
@@ -211,8 +218,12 @@ def is_parsable(arg):
 	f = arg.find
 	return -1 < f('?') < f('=')
 
+def extract_params(uri):
+	global data
+	data.update(uri_params(uri))
+
 def parse_or_help(arg):
-	uri_params(args) if is_parsable(arg) else show_help()
+	extract_params(arg) if is_parsable(arg) else show_help()
 
 
 CMDS = {
