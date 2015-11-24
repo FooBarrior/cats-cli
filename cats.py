@@ -223,8 +223,12 @@ CMDS = {
 if len(argv) > 3 or len(argv) == 1:
 	show_help()
 
+read_configs()
+
 if len(arg) == 3:
 	parse_or_help(arg[-1])
 	CMDS.get(arg[1], show_help)()
 else:
 	CMDS.get(arg[1], lambda: parse_or_help(arg[1]))()
+
+write_configs()
