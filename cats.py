@@ -43,7 +43,7 @@ git_soft, git_hard = (
 
 
 def init(taskfile=None):
-	taskfile = taskfile || 'task.xml'
+	taskfile = taskfile || 'problem.xml'
 	git_hard('init')
 	open(taskfile, 'w').write('''<?xml version="1.0" encoding="UTF-8" ?>
 <CATS version="1.8">
@@ -94,7 +94,7 @@ def uri_params(uri):
 	return dict(p.split('=') for p in uri.split('?')[-1].split(';'))
 
 def prepare_zip():
-	git_hard('archive -o task.zip')
+	git_hard('archive -o problem.zip')
 
 def extract_console():
 	ta_s = '<textarea cols="100" rows="10" readonly="readonly">'
@@ -140,7 +140,7 @@ def update_repo(sid, cid, cpid, download):
 
 	r=post('main.pl',
 		f='problems',
-		files={'zip': 'task.zip'},
+		files={'zip': 'problem.zip'},
 		replace="1",
 		sid=sid,
 		cid=cid,
@@ -153,7 +153,7 @@ def add_new_task():
 
 	r=post('main.pl',
 		f='problems',
-		files={'zip': 'task.zip'},
+		files={'zip': 'problem.zip'},
 		add_new="1",
 		sid=sid,
 		cid=cid).text
