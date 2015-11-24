@@ -146,7 +146,7 @@ def add_new_task():
 def show_help():
 	print('''usage: {0} <command> [url]
 url with sid, cid and cpid currently should be passed at least once to work
-cammands are:
+commands are:
 init      initialize empty git repository
 update    update existing problem
 add       add new problem
