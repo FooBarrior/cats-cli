@@ -172,7 +172,7 @@ def add_new_task(sid, cid):
 		sid=sid,
 		cid=cid)
 
-	print('add http status: ' 'ok' if r.ok else r.status_code)
+	print('add http status: ', 'ok' if r.ok else r.status_code)
 	
 	output = extract_console(r.text)
 	print(output)
