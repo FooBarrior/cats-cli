@@ -1,3 +1,5 @@
+#! /usr/bin/python3
+
 import requests
 import subprocess
 import getpass
@@ -5,6 +7,7 @@ import getpass
 from os import path
 from itertools import chain
 from zipfile import ZipFile
+from sys import argv
 
 CATS_URL = 'http://imcs.dvfu.ru/cats'
 INIT_CMD = 'cats init'
@@ -24,6 +27,7 @@ def _git(args, soft):
 			return e.output, e.returncode
 		else:
 			print('git: ', e.output)
+			print('args: ', args)
 			exit(e.returncode)
 
 	except FileNotFoundError as e:
@@ -43,7 +47,7 @@ git_soft, git_hard = (
 
 
 def init(taskfile=None):
-	taskfile = taskfile || 'problem.xml'
+	taskfile = taskfile or 'problem.xml'
 	git_hard('init')
 	open(taskfile, 'w').write('''<?xml version="1.0" encoding="UTF-8" ?>
 <CATS version="1.8">
@@ -78,15 +82,18 @@ def init(taskfile=None):
 
 </Problem>
 </CATS>''')
-	open('.gitignore', 'w').writelines(['.gitignore', '*.zip', RC_FILE, '*.exe', 'a.out', '*.jar', '*.class'])
+	open('.gitignore', 'w').writelines([
+		'.gitignore', '*.zip', RC_FILE, 
+		'*.exe', 'a.out', '*.jar', '*.class', 
+		'*.stackdump', 'input.txt', 'output.txt'])
 
 def get(rel_url, **params):
 	params['json'] = '1'
 	paramstr = ';'.join('='.join(i) for i in params.items())
 	return requests.get('{}/{}?{}'.format(CATS_URL, rel_url, paramstr))
 
-def post(rel_url, files=None, data=None):
-	return requests.post(CATS_URL + '/' + rel_url, files={k: open(v, 'rb') for k, v in files}, data=data)
+def post(rel_url, files=None, **data):
+	return requests.post(CATS_URL + '/' + rel_url, files={k: open(v, 'rb') for k, v in files.items()}, data=data)
 
 def login():
 	print('Username: ', end='')
@@ -101,9 +108,9 @@ def uri_params(uri):
 	return dict(p.split('=') for p in uri.split('?')[-1].split(';'))
 
 def prepare_zip():
-	git_hard('archive -o problem.zip')
+	git_hard('archive -o problem.zip @')
 
-def extract_console():
+def extract_console(r):
 	ta_s = '<textarea cols="100" rows="10" readonly="readonly">'
 	ta_e = '</textarea>'
 	r = r[r.find(ta_s) + len(ta_s):]
@@ -155,7 +162,7 @@ def update_repo(sid, cid, cpid, download):
 	
 	print(extract_console(r))
 
-def add_new_task():
+def add_new_task(sid, cid):
 	prepare_zip()
 
 	r=post('main.pl',
@@ -163,13 +170,16 @@ def add_new_task():
 		files={'zip': 'problem.zip'},
 		add_new="1",
 		sid=sid,
-		cid=cid).text
+		cid=cid)
+
+	print('add http status: ' 'ok' if r.ok else r.status_code)
 	
-	output = extract_console(r)
+	output = extract_console(r.text)
+	print(output)
 
 	S = 'Initialized empty Git repository in /srv/cats/cgi-bin/repos/'
-	output = output[find(S):]
-	repo = output[:find('/.git/')]
+	output = output[output.find(S):]
+	repo = output[:output.find('/.git/')]
 
 	global data
 	data['download'] = repo
@@ -182,7 +192,7 @@ init      initialize empty git repository
 sync      update existing problem
 add       add new problem
 login     relogin if session is over
-''')
+'''.format(path.basename(__file__)))
 	exit(0)
 
 
@@ -199,18 +209,18 @@ def get_or_panic(k):
 	print('Key `{}` is necessary for this command'.format(k))
 	exit(1)
 
-dic = lambda *l: {k: get_or_panic[k] for k in l}
-vals = lambda *l: (get_or_panic[k] for k in l)
+dic = lambda *l: {k: data[k] for k in l if k in data}
+cmdvals = lambda *l: (get_or_panic(k) for k in l)
 
-def read_config(file):
+def read_config(filename):
 	try:
 		global data
-		data.update(dict(l.split('=') for l in open('file', 'r')))
+		data.update(dict(l.split('=') for l in open(filename, 'r') if l))
 	except FileNotFoundError:
 		pass
 
 def write_config(file, d):
-	open(file, 'w').writelines(("=".join(k, v) for k, v in d.items()))
+	open(file, 'w').writelines("=".join((k, v)) for k, v in d.items() if v)
 
 
 def read_configs():
@@ -218,8 +228,8 @@ def read_configs():
 	read_config(RC_FILE)
 
 def write_configs():
-	write_config(path.join(path.expanduser('~'), RC_FILE), dic('sid')})
-	write_config(path.join(RC_FILE), dic('cid', 'cpid', 'download')})
+	write_config(path.join(path.expanduser('~'), RC_FILE), dic('sid'))
+	write_config(path.join(RC_FILE), dic('cid', 'cpid', 'download'))
 
 def is_parsable(arg):
 	f = arg.find
@@ -232,13 +242,19 @@ def extract_params(uri):
 def parse_or_help(arg):
 	extract_params(arg) if is_parsable(arg) else show_help()
 
+def cmd_add_new_task():
+	global data
+	if 'cpid' not in data and 'download' not in data:
+		add_new_task(*cmdvals('sid', 'cid'))
+	else:
+		print('Task already exist')
 
 CMDS = {
 	'init': init,
-	'update': lambda: update_repo(*vals('sid', 'cid', 'cpid', 'download'))
-	'add': add_new_task
-	'help': show_help
-	'login': lambda: data['sid'] = login()
+	'update': lambda: update_repo(*cmdvals('sid', 'cid', 'cpid', 'download')),
+	'add': cmd_add_new_task,
+	'help': show_help,
+	'login': lambda: data.update(dict(sid=login()))
 }
 
 if len(argv) > 3 or len(argv) == 1:
@@ -246,10 +262,10 @@ if len(argv) > 3 or len(argv) == 1:
 
 read_configs()
 
-if len(arg) == 3:
-	parse_or_help(arg[-1])
-	CMDS.get(arg[1], show_help)()
+if len(argv) == 3:
+	parse_or_help(argv[-1])
+	CMDS.get(argv[1], show_help)()
 else:
-	CMDS.get(arg[1], lambda: parse_or_help(arg[1]))()
+	CMDS.get(argv[1], lambda: parse_or_help(arg[1]))()
 
 write_configs()
