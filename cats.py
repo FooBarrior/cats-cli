@@ -60,6 +60,7 @@ def download_zip(sid, cid, download):
 	zip_file_name = r.url.split('/')[-1]
 	with open(zip_file_name, 'wb') as f:
 		f.write(r.content)
+	return zip_file_name
 
 
 def init(sid=None, cip=None, download=None, taskfile=None, **etc):
@@ -105,7 +106,7 @@ def init(sid=None, cip=None, download=None, taskfile=None, **etc):
 		'*.stackdump', 'input.txt', 'output.txt'])
 
 	if sid and cid and cpid:
-		download_zip(sid, cid, download)
+		zip_file_name = download_zip(sid, cid, download)
 		with ZipFile(zip_file_name, 'r') as zf:
 			zf.extractall()
 			git_hard(['add'] + zf.namelist())
@@ -136,7 +137,7 @@ def extract_console(r):
 
 
 def update_repo(sid, cid, cpid, download):
-	download_zip(sid, cid, download)
+	zip_file_name = download_zip(sid, cid, download)
 
 	git_status = git_hard('status --untracked -s'.split())
 
