@@ -45,7 +45,24 @@ def _git(args, soft):
 git_soft = lambda args: _git(args, soft=True)
 git_hard = lambda args: _git(args, soft=False) 
 
-def init(taskfile=None):
+
+def get(rel_url, **params):
+	params['json'] = '1'
+	paramstr = ';'.join('='.join(i) for i in params.items())
+	return requests.get('{}/{}?{}'.format(CATS_URL, rel_url, paramstr))
+
+def post(rel_url, files=None, **data):
+	return requests.post(CATS_URL + '/' + rel_url, files={k: open(v, 'rb') for k, v in files.items()}, data=data)
+
+
+def download_zip(sid, cid, download):
+	r = get('main.pl', f='problems', sid=sid, cid=cid, download=download)
+	zip_file_name = r.url.split('/')[-1]
+	with open(zip_file_name, 'wb') as f:
+		f.write(r.content)
+
+
+def init(sid=None, cip=None, download=None, taskfile=None, **etc):
 	taskfile = taskfile or 'problem.xml'
 	git_hard('init')
 	open(taskfile, 'w').write('''<?xml version="1.0" encoding="UTF-8" ?>
@@ -81,18 +98,19 @@ def init(taskfile=None):
 
 </Problem>
 </CATS>''')
+
 	open('.gitignore', 'w').writelines([
 		'.gitignore', '*.zip', RC_FILE, 
 		'*.exe', 'a.out', '*.jar', '*.class', 
 		'*.stackdump', 'input.txt', 'output.txt'])
 
-def get(rel_url, **params):
-	params['json'] = '1'
-	paramstr = ';'.join('='.join(i) for i in params.items())
-	return requests.get('{}/{}?{}'.format(CATS_URL, rel_url, paramstr))
+	if sid and cid and cpid:
+		download_zip(sid, cid, download)
+		with ZipFile(zip_file_name, 'r') as zf:
+			zf.extractall()
+			git_hard(['add'] + zf.namelist())
+			git_hard('commit -m "initial commit"')
 
-def post(rel_url, files=None, **data):
-	return requests.post(CATS_URL + '/' + rel_url, files={k: open(v, 'rb') for k, v in files.items()}, data=data)
 
 def login():
 	print('Username: ', end='')
@@ -118,10 +136,7 @@ def extract_console(r):
 
 
 def update_repo(sid, cid, cpid, download):
-	r = get('main.pl', f='problems', sid=sid, cid=cid, download=download)
-	zip_file_name = r.url.split('/')[-1]
-	with open(zip_file_name, 'wb') as f:
-		f.write(r.content)
+	download_zip(sid, cid, download)
 
 	git_status = git_hard('status --untracked -s'.split())
 
