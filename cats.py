@@ -26,7 +26,8 @@ def _git(args, soft):
 		if soft:
 			return e.output, e.returncode
 		else:
-			print('git: ', e.output)
+			print("IM HARD")
+			print('git: ', e.output.decode('utf-8'))
 			print('args: ', args)
 			exit(e.returncode)
 
@@ -41,10 +42,8 @@ def _git(args, soft):
 			return output
 
 
-git_soft, git_hard = (
-	lambda args: _git(args, soft=soft) 
-		for soft in (True, False))
-
+git_soft = lambda args: _git(args, soft=True)
+git_hard = lambda args: _git(args, soft=False) 
 
 def init(taskfile=None):
 	taskfile = taskfile or 'problem.xml'
@@ -128,13 +127,13 @@ def update_repo(sid, cid, cpid, download):
 
 	if git_status:
 		print("There are untracked files in work dir:")
-		print(git_status)
+		print(git_status.decode('utf-8'))
 		print("They may be unrecoverably overwriten by update.\nDo You want to continue? [y]n:")
 		if input() not in 'yY':
 			print('You may commit or stash files with git first, and then rerun command, or run `{}`'.format(PUSHALL_CMD))
 			return
 
-	ck_cmd = ['git', 'checkout']
+	ck_cmd = ['checkout']
 	if subprocess.call('git rev-parse --verify ' + REMOTE_BRANCH):
 		ck_cmd.append('--orphan')
 	ck_cmd.append(REMOTE_BRANCH)
@@ -143,12 +142,12 @@ def update_repo(sid, cid, cpid, download):
 
 	with ZipFile(zip_file_name, 'r') as zf:
 		zf.extractall()
-		git_hard(['git', 'add'] + zf.namelist())
+		git_hard(['add'] + zf.namelist())
 
-	git_hard(['git', 'commit', '-m', 'Update remote version'])
+	git_soft(['commit', '-m', 'Update remote version'])
 
+	git_hard('merge master')
 	git_hard('checkout master')
-	git_hard('merge ' + REMOTE_BRANCH, shell=True)
 
 	prepare_zip()
 
@@ -158,7 +157,7 @@ def update_repo(sid, cid, cpid, download):
 		replace="1",
 		sid=sid,
 		cid=cid,
-		cpid=cpid).text
+		problem_id=cpid).text
 	
 	print(extract_console(r))
 
@@ -178,11 +177,27 @@ def add_new_task(sid, cid):
 	print(output)
 
 	S = 'Initialized empty Git repository in /srv/cats/cgi-bin/repos/'
-	output = output[output.find(S):]
+	output = output[output.find(S) + len(S):]
 	repo = output[:output.find('/.git/')]
 
 	global data
 	data['download'] = repo
+
+
+def gather_data(sid=None, cid=None, cpid=None, download=None, **etc):
+	if not sid or not cid:
+		return {}
+	if not cpid and not download:
+		return {}
+
+	j = get('main.pl', f='problems', sid=sid, cid=cid).json()
+	for p in j['problems']:
+		dl = uri_params(p['package_url'])['download']
+		if p['id'] == cpid or dl == download:
+			return dict(cpid=str(p['id']), download=dl)
+
+	return {}
+
 
 def show_help():
 	print('''usage: {0} <command> [url]
@@ -215,17 +230,20 @@ cmdvals = lambda *l: (get_or_panic(k) for k in l)
 def read_config(filename):
 	try:
 		global data
-		data.update(dict(l.split('=') for l in open(filename, 'r') if l))
+		data.update({k: v.strip() for k, v in 
+			(l.split('=') for l in open(filename, 'r') if l)
+			if v.strip()})
 	except FileNotFoundError:
 		pass
 
-def write_config(file, d):
-	open(file, 'w').writelines("=".join((k, v)) for k, v in d.items() if v)
+def write_config(filename, d):
+	open(filename, 'w').write('\n'.join(("=".join((k, v)) for k, v in d.items() if v)))
 
 
 def read_configs():
 	read_config(path.join(path.expanduser('~'), RC_FILE))
 	read_config(RC_FILE)
+	data.update(gather_data(**data))
 
 def write_configs():
 	write_config(path.join(path.expanduser('~'), RC_FILE), dic('sid'))
@@ -238,6 +256,7 @@ def is_parsable(arg):
 def extract_params(uri):
 	global data
 	data.update(uri_params(uri))
+	data.update(gather_data(**data))
 
 def parse_or_help(arg):
 	extract_params(arg) if is_parsable(arg) else show_help()
@@ -251,7 +270,7 @@ def cmd_add_new_task():
 
 CMDS = {
 	'init': init,
-	'update': lambda: update_repo(*cmdvals('sid', 'cid', 'cpid', 'download')),
+	'sync': lambda: update_repo(*cmdvals('sid', 'cid', 'cpid', 'download')),
 	'add': cmd_add_new_task,
 	'help': show_help,
 	'login': lambda: data.update(dict(sid=login()))
@@ -266,6 +285,6 @@ if len(argv) == 3:
 	parse_or_help(argv[-1])
 	CMDS.get(argv[1], show_help)()
 else:
-	CMDS.get(argv[1], lambda: parse_or_help(arg[1]))()
+	CMDS.get(argv[1], lambda: parse_or_help(argv[1]))()
 
 write_configs()
