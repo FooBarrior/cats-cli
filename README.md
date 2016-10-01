@@ -4,8 +4,8 @@ CLI for [cats](http://imcs.dvfu.ru/cats). Currently only for jury
 
 - Install [python3](https://python.org)
 - Install [git](https://git-scm.com/)
-- Install [requests](http://docs.python-requests.org/en/latest/) python package with pip
 - Clone this repository
+- pip install -r requirements.txt
 - ln -s cats.py /usr/bin/cats
 
 # Running
