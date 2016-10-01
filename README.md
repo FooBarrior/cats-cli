@@ -18,10 +18,12 @@ url with sid, cid and (cpid or download) currently should be passed at least onc
 This means, you can use either problem text url, or problem package url.
 
 commands are:
+```
 init      initialize empty git repository
 sync      update existing problem
 add       add new problem
 login     relogin if session is over
+```
 
 # Example
 
