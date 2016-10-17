@@ -2,11 +2,13 @@ CLI for [cats](http://imcs.dvfu.ru/cats). Currently only for jury
 
 # Installation
 
-- Install [python3](https://python.org)
-- Install [git](https://git-scm.com/)
-- Clone this repository
-- pip install -r requirements.txt
-- ln -s cats.py /usr/bin/cats
+- Install [python3](https://python.org) and [git](https://git-scm.com/)
+- Clone this repository, install requirements, add cats.py to your PATH
+```bash
+git clone https://github.com/FooBarrior/cats-cli
+pip install -r requirements.txt
+ln -s cats.py ~/.local/bin/cats
+```
 
 # Running
 
