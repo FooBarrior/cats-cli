@@ -7,7 +7,7 @@ CLI for [cats](http://imcs.dvfu.ru/cats). Currently only for jury
 ```bash
 git clone https://github.com/FooBarrior/cats-cli
 pip install -r requirements.txt
-ln -s cats.py ~/.local/bin/cats
+ln -s ~+/cats.py ~/.local/bin/cats
 ```
 
 # Running
