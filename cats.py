@@ -65,6 +65,9 @@ def download_zip(sid, cid, download):
 
 def init(sid=None, cip=None, download=None, taskfile=None, **etc):
 	taskfile = taskfile or 'problem.xml'
+	if path.exists(taskfile):
+		print("Cannot init: file {} exists.".format(taskfile))
+		return
 	git_hard('init')
 	open(taskfile, 'w').write('''<?xml version="1.0" encoding="UTF-8" ?>
 <CATS version="1.8">
