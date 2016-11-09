@@ -13,6 +13,7 @@ ln -s ~+/cats.py ~/.local/bin/cats
 # Running
 
 `cats url`
+
 `cats command [url]`
 
 url with sid, cid and (cpid or download) currently should be passed at least once to work
