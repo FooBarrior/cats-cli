@@ -7,12 +7,13 @@ CLI for [cats](http://imcs.dvfu.ru/cats). Currently only for jury
 ```bash
 git clone https://github.com/FooBarrior/cats-cli
 pip install -r requirements.txt
-ln -s cats.py ~/.local/bin/cats
+ln -s ~+/cats.py ~/.local/bin/cats
 ```
 
 # Running
 
 `cats url`
+
 `cats command [url]`
 
 url with sid, cid and (cpid or download) currently should be passed at least once to work
